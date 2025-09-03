@@ -75,16 +75,17 @@ export async function POST(req: NextRequest) {
 
     // Get the next auto value
     const [rows] = await db.execute<MaxAutoRow[]>(
-      "SELECT MAX(auto) as maxAuto FROM schoolslist"
-    );
-    const maxAuto = rows[0]?.maxAuto ?? 0;
-    const newAuto = maxAuto + 1;
+  "SELECT MAX(auto) as maxAuto FROM schoolslist FOR UPDATE"
+);
 
-    // Insert the school data
-    await db.execute<ResultSetHeader>(
-      "INSERT INTO schoolslist (auto, id, name, address, city, state, contact, image, email) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-      [newAuto, id, name, address, city, state, contact, imageUrl, email]
-    );
+const maxAuto = rows[0]?.maxAuto ?? 0;
+const newAuto = maxAuto + 1;
+
+await db.execute<ResultSetHeader>(
+  "INSERT INTO schoolslist (auto, id, name, address, city, state, contact, image, email) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+  [newAuto, id, name, address, city, state, contact, imageUrl, email]
+);
+
 
     return NextResponse.json({
       success: true,
