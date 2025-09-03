@@ -4,7 +4,7 @@ import { RowDataPacket } from "mysql2"; // 👈 important
 
 interface School extends RowDataPacket {
   auto: number;
-  id:number;
+  id: string;
   name: string;
   address: string;
   city: string;
