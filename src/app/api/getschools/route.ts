@@ -1,22 +1,47 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
+import { RowDataPacket } from "mysql2"; // 👈 important
+
+interface School extends RowDataPacket {
+  auto: number;
+  id:number;
+  name: string;
+  address: string;
+  city: string;
+  state: string;
+  contact: string;
+  image: string;
+  email: string;
+}
 
 export async function GET() {
   try {
     const db = await connectDB();
-    
-    const [rows]: any = await db.execute("SELECT * FROM schoolslist ORDER BY auto DESC");
+
+    // db.execute returns [rows, fields]
+    const [rows] = await db.execute<School[]>("SELECT * FROM schoolslist ORDER BY auto DESC");
+
     console.log(rows);
+
     return NextResponse.json({
       success: true,
       data: rows
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error fetching schools:", error);
-    return NextResponse.json({
-      success: false,
-      message: "Failed to fetch schools",
-      error: error.message
-    }, { status: 500 });
+
+    let message = "Failed to fetch schools";
+    if (error instanceof Error) {
+      message = error.message;
+    }
+
+    return NextResponse.json(
+      {
+        success: false,
+        message,
+        error: message
+      },
+      { status: 500 }
+    );
   }
 }
