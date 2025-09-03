@@ -2,17 +2,22 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { randomUUID } from "crypto";
 import { v2 as cloudinary } from "cloudinary";
+import { RowDataPacket, ResultSetHeader } from "mysql2";
 
-// Configure Cloudinary
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+interface MaxAutoRow extends RowDataPacket {
+  maxAuto: number | null;
+}
+
 export async function POST(req: NextRequest) {
   try {
-    let name, address, city, state, contact, email, imageUrl;
+    let name: string, address: string, city: string, state: string;
+    let contact: string, email: string, imageUrl: string;
 
     // check content type
     const contentType = req.headers.get("content-type") || "";
@@ -42,7 +47,7 @@ export async function POST(req: NextRequest) {
 
         imageUrl = uploadResult.secure_url;
       } else {
-        imageUrl = ""; // optional fallback
+        imageUrl = ""; 
       }
     } else {
       // Handle JSON (string image path)
@@ -69,14 +74,14 @@ export async function POST(req: NextRequest) {
     const id = randomUUID();
 
     // Get the next auto value
-    const [rows]: any = await db.execute(
+    const [rows] = await db.execute<MaxAutoRow[]>(
       "SELECT MAX(auto) as maxAuto FROM schoolslist"
     );
-    const maxAuto = rows[0] ? rows[0].maxAuto || 0 : 0;
+    const maxAuto = rows[0]?.maxAuto ?? 0;
     const newAuto = maxAuto + 1;
 
     // Insert the school data
-    await db.execute(
+    await db.execute<ResultSetHeader>(
       "INSERT INTO schoolslist (auto, id, name, address, city, state, contact, image, email) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
       [newAuto, id, name, address, city, state, contact, imageUrl, email]
     );
@@ -85,10 +90,16 @@ export async function POST(req: NextRequest) {
       success: true,
       message: "School added successfully",
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("API Error:", error);
+
+    let message = "Something went wrong";
+    if (error instanceof Error) {
+      message = error.message;
+    }
+
     return NextResponse.json(
-      { success: false, error: error.message },
+      { success: false, error: message },
       { status: 500 }
     );
   }
